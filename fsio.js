@@ -113,7 +113,7 @@ function cprints(str_left, str_right) {
 }
 
 function stats_determine(a) {
-	var astats			= stats(a);
+	var astats				= stats(a);
 	
 	cprintd('Size', 		a.length);
 	cprints('Min@(index)',	sprintf('%10.5f (%d)', astats.min, astats.minIndex));
@@ -149,6 +149,50 @@ function curvData_parse(data) {
 	stats_determine(af_curvVals);
 }
 
+function mgzData_parse(data) {
+	
+	var ndim1		= parseUInt32EndianSwapped(data, 0);
+	var ndim2		= parseUInt32EndianSwapped(data, 4);
+	var ndim3		= parseUInt32EndianSwapped(data, 8);
+	var nframes		= parseUInt32EndianSwapped(data, 12);
+	var type		= parseUInt32EndianSwapped(data, 16);
+	var dof			= parseUInt32EndianSwapped(data, 20);
+	var rasgoodflag	= parseUInt32EndianSwapped(data, 24);
+
+	console.log(sprintf('%20s = %10d\n', 'ndim1', 	ndim1));
+	console.log(sprintf('%20s = %10d\n', 'ndim2', 	ndim2));
+	console.log(sprintf('%20s = %10d\n', 'ndim3', 	ndim3));
+	console.log(sprintf('%20s = %10d\n', 'nframes', nframes));
+	console.log(sprintf('%20s = %10d\n', 'type', 	type));
+	console.log(sprintf('%20s = %10d\n', 'dof', 	dof));
+	console.log(sprintf('%20s = %10d\n', 'rasgoodflag', 	
+													rasgoodflag));
+	
+//	stats_determine(af_intensityVals);
+}
+
+function mgz_fileLoad(filePath) {
+
+	// we use a simple XHR to get the file contents
+	  // this works for binary and for ascii files
+	  var request = new XMLHttpRequest();
+	  
+	  // listen to progress events.. here, goog.events.listen did not work
+	  // request.addEventListener('progress',
+	  // this.loadFileProgress.bind(this, object), false);
+	  //request.onAbort = loadAbort();
+	  //request.onError = loadError();
+	  request.addEventListener('load', function() { 
+		  mgzData_parse(request.response); });
+
+	  // configure the URL
+	  request.open('GET', filePath, true);
+	  request.overrideMimeType("text/plain; charset=x-user-defined");
+	  request.setRequestHeader("Content-Type", "text/plain");
+	  
+	  // .. and GO!
+	  request.send(null);	
+}
 
 function curv_fileLoad(filePath) {
 
@@ -161,7 +205,8 @@ function curv_fileLoad(filePath) {
 	  // this.loadFileProgress.bind(this, object), false);
 	  //request.onAbort = loadAbort();
 	  //request.onError = loadError();
-	  request.addEventListener('load', function() { curvData_parse(request.response); });
+	  request.addEventListener('load', function() { 
+		  curvData_parse(request.response); });
 
 	  // configure the URL
 	  request.open('GET', filePath, true);
@@ -170,14 +215,13 @@ function curv_fileLoad(filePath) {
 	  
 	  // .. and GO!
 	  request.send(null);	
-	
-	
 }
 
 
 function run() {
 	
 	curv_fileLoad('rh.smoothwm.K.crv');
+	mgz_fileLoad('orig.mgh');
 	console.log('Curvature file parsed\n');
 	
 }
