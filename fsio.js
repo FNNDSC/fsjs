@@ -4,6 +4,43 @@ function parseUChar8(data, offset) {
 
 };
 
+function parseUChar8Array(data, offset, elements) {
+
+	  var arr = new Array();
+	  
+	  var max = 0;
+	  var min = Infinity;
+	  
+	  var i;
+	  for (i = 0; i < elements; i++) {
+	    var val = parseUChar8(data, offset + (i));
+	    arr[i] = val;
+	    max = Math.max(max, val);
+	    min = Math.min(min, val);
+	  }
+	  
+	  return [arr, max, min];
+};
+
+
+function parseUInt16(data, offset) {
+
+	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
+	      offset + 1);
+	  
+	  return (b1 << 8) + b0;
+	  
+	};
+		
+function parseUInt16EndianSwapped(data, offset) {
+
+	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
+		      offset + 1);
+		  
+	  return (b0 << 8) + b1;
+		  
+	};
+			
 function parseFloat32EndianSwapped(data, offset) {
 
 	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
@@ -58,6 +95,24 @@ function parseUInt32EndianSwapped(data, offset) {
 	      .parseUChar8(data, offset + 3);
 	  
 	  return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
+};
+
+function parseUInt32EndianSwappedArray(data, offset, elements) {
+
+	  var arr = new Array();
+	  
+	  var max = 0;
+	  var min = Infinity;
+	  
+	  var i;
+	  for (i = 0; i < elements; i++) {
+	    var val = parseUInt32EndianSwapped(data, offset + (i * 4));
+	    arr[i] = val;
+	    max = Math.max(max, val);
+	    min = Math.min(min, val);
+	  }
+	  
+	  return [arr, max, min];
 };
 
 function fread3(data) {
@@ -149,26 +204,136 @@ function curvData_parse(data) {
 	stats_determine(af_curvVals);
 }
 
-function mgzData_parse(data) {
-	
-	var ndim1		= parseUInt32EndianSwapped(data, 0);
-	var ndim2		= parseUInt32EndianSwapped(data, 4);
-	var ndim3		= parseUInt32EndianSwapped(data, 8);
-	var nframes		= parseUInt32EndianSwapped(data, 12);
-	var type		= parseUInt32EndianSwapped(data, 16);
-	var dof			= parseUInt32EndianSwapped(data, 20);
-	var rasgoodflag	= parseUInt32EndianSwapped(data, 24);
-
-	console.log(sprintf('%20s = %10d\n', 'ndim1', 	ndim1));
-	console.log(sprintf('%20s = %10d\n', 'ndim2', 	ndim2));
-	console.log(sprintf('%20s = %10d\n', 'ndim3', 	ndim3));
-	console.log(sprintf('%20s = %10d\n', 'nframes', nframes));
-	console.log(sprintf('%20s = %10d\n', 'type', 	type));
-	console.log(sprintf('%20s = %10d\n', 'dof', 	dof));
+function MRI_headerPrint(MRI) {
+	console.log(sprintf('%20s = %10d\n', 'ndim1', 	MRI.version));
+	console.log(sprintf('%20s = %10d\n', 'ndim1', 	MRI.ndim1));
+	console.log(sprintf('%20s = %10d\n', 'ndim2', 	MRI.ndim2));
+	console.log(sprintf('%20s = %10d\n', 'ndim3', 	MRI.ndim3));
+	console.log(sprintf('%20s = %10d\n', 'nframes', MRI.nframes));
+	console.log(sprintf('%20s = %10d\n', 'type', 	MRI.type));
+	console.log(sprintf('%20s = %10d\n', 'dof', 	MRI.dof));
 	console.log(sprintf('%20s = %10d\n', 'rasgoodflag', 	
-													rasgoodflag));
+													MRI.rasgoodflag));
+}
+
+function MRI_voxelSizesPrint(MRI) {
+	console.log('Voxel sizes = %f x %f x %f [mm]\n',
+				MRI.v_voxelsize[0],
+				MRI.v_voxelsize[1],
+				MRI.v_voxelsize[2]);
+}
+
+function MRI_rasMatrixPrint(MRI) {
+	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+		MRI.M_ras[0][0], MRI.M_ras[0][1], MRI.M_ras[0][2], MRI.M_ras[0][3]));
+	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+		MRI.M_ras[1][0], MRI.M_ras[1][1], MRI.M_ras[1][2], MRI.M_ras[1][3]));
+	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+		MRI.M_ras[2][0], MRI.M_ras[2][1], MRI.M_ras[2][2], MRI.M_ras[2][3]));
+}
+
+function mgzData_parse(data) {
+
+	var MRI = {
+			version:		0,
+			Tr: 			0, 
+			Te: 			0, 
+			ndim1:			0,
+			ndim2:			0,
+			ndim3:			0,
+			nframes: 		0,
+			type:			0,
+			dof:			0,
+			rasgoodflag:	0,
+			M_ras:			[
+			      			 [0, 0, 0, 0],
+			      			 [0, 0, 0, 0],
+			      			 [0, 0, 0, 0]
+			      			 ],
+			v_voxelsize:	[],
+			v_data:			[],		// data as single vector
+			V_data: 		[]		// data as volume 
+			};	
+
+	var MRItype = {
+			MRI_UCHAR	: {value: 0, name: "uchar",	size:	1},
+			MRI_INT		: {value: 1, name: "int",	size:	4},
+			MRI_LONG	: {value: 2, name: "long",	size:   8},
+			MRI_FLOAT	: {value: 3, name: "float", size:	4},
+			MRI_SHORT	: {value: 4, name: "short", size:	2},
+			MRI_BITMAP 	: {value: 5, name: "bitmap", size:  8}
+	}
 	
-//	stats_determine(af_intensityVals);
+	var UNUSED_SPACE_SIZE	= 256;
+	var MGH_VERSION			= 1;
+	var sizeof_char			= 1;
+	var sizeof_short		= 2;
+	var sizeof_int			= 4;
+	var	sizeof_float		= 4;
+	var sizeof_double		= 8;
+	var USED_SPACE_SIZE		= (3*sizeof_float+4*3*sizeof_float);
+	var unused_space_size	= USED_SPACE_SIZE - sizeof_float;
+
+	MRI.version		= parseUInt32EndianSwapped(data, 0);
+	MRI.ndim1		= parseUInt32EndianSwapped(data, 4);
+	MRI.ndim2		= parseUInt32EndianSwapped(data, 8);
+	MRI.ndim3		= parseUInt32EndianSwapped(data, 12);
+	MRI.nframes		= parseUInt32EndianSwapped(data, 16);
+	MRI.type		= parseUInt32EndianSwapped(data, 20);
+	MRI.dof			= parseUInt32EndianSwapped(data, 24);
+	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, 28); //dp now 30
+	
+	MRI_headerPrint(MRI);
+
+	if(MRI.rasgoodflag > 0) {
+		// Read in voxel size and RAS matrix
+		unused_space_size -= USED_SPACE_SIZE;
+		MRI.v_voxelsize[0]	= parseFloat32EndianSwapped(data, 30);
+		MRI.v_voxelsize[1]	= parseFloat32EndianSwapped(data, 34);
+		MRI.v_voxelsize[2] 	= parseFloat32EndianSwapped(data, 38);
+		
+		// X
+		MRI.M_ras[0][0]		= parseFloat32EndianSwapped(data, 42);
+		MRI.M_ras[1][0]		= parseFloat32EndianSwapped(data, 46);
+		MRI.M_ras[2][0]		= parseFloat32EndianSwapped(data, 50);
+
+		// Y
+		MRI.M_ras[0][1]		= parseFloat32EndianSwapped(data, 54);
+		MRI.M_ras[1][1]		= parseFloat32EndianSwapped(data, 58);
+		MRI.M_ras[2][1]		= parseFloat32EndianSwapped(data, 62);
+		
+		// Z
+		MRI.M_ras[0][2]		= parseFloat32EndianSwapped(data, 66);
+		MRI.M_ras[1][2]		= parseFloat32EndianSwapped(data, 70);
+		MRI.M_ras[2][2]		= parseFloat32EndianSwapped(data, 74);
+
+		// C
+		MRI.M_ras[0][3]		= parseFloat32EndianSwapped(data, 78);
+		MRI.M_ras[1][3]		= parseFloat32EndianSwapped(data, 82);
+		MRI.M_ras[2][3]		= parseFloat32EndianSwapped(data, 86); //dp = 90
+
+		MRI_voxelSizesPrint(MRI);
+		MRI_rasMatrixPrint(MRI);
+	}
+	
+	var volsize	= MRI.ndim1 * MRI.ndim2 * MRI.ndim3;
+	
+	switch(MRI.type) {
+	case MRItype.MRI_UCHAR.value:
+		console.log('Reading UCHAR vals: %d\n', volsize);
+		a_ret		= parseUChar8Array(data, 90, volsize);
+		MRI.v_data	= a_ret[0];
+		break;
+	case MRItype.MRI_INT.value:
+		console.log('Reading INT vals: %d\n', volsize);
+		a_ret		= parseUInt32EndianSwappedArray(data, 90, volsize);
+		MRI.v_data	= a_ret[0];
+		break;
+		
+	}
+	
+		
+	stats_determine(MRI.v_data);
 }
 
 function mgz_fileLoad(filePath) {
