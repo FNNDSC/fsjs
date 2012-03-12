@@ -1,0 +1,7 @@
+fsjs.js -- FreeSurfer JavaScript 
+
+fsio.js:	I/O for FS type files
+		o mgz/mgh
+		o 'curv'
+
+

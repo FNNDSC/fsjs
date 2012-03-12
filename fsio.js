@@ -25,8 +25,7 @@ function parseUChar8Array(data, offset, elements) {
 
 function parseUInt16(data, offset) {
 
-	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
-	      offset + 1);
+	  var b0 = parseUChar8(data, offset), b1 = parseUChar8(data, offset + 1);
 	  
 	  return (b1 << 8) + b0;
 	  
@@ -34,8 +33,7 @@ function parseUInt16(data, offset) {
 		
 function parseUInt16EndianSwapped(data, offset) {
 
-	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
-		      offset + 1);
+	  var b0 = parseUChar8(data, offset), b1 = parseUChar8(data, offset + 1);
 		  
 	  return (b0 << 8) + b1;
 		  
@@ -43,12 +41,13 @@ function parseUInt16EndianSwapped(data, offset) {
 			
 function parseFloat32EndianSwapped(data, offset) {
 
-	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
-	      offset + 1), b2 = this.parseUChar8(data, offset + 2), b3 = this
-	      .parseUChar8(data, offset + 3),
-
-	  sign = 1 - (2 * (b0 >> 7)), exponent = (((b0 << 1) & 0xff) | (b1 >> 7)) - 127, mantissa = ((b1 & 0x7f) << 16) |
-	      (b2 << 8) | b3;
+	  var 	b0 = parseUChar8(data, offset), 
+	  		b1 = parseUChar8(data, offset + 1), 
+	  		b2 = parseUChar8(data, offset + 2), 
+	  		b3 = parseUChar8(data, offset + 3),
+	  		sign = 1 - (2 * (b0 >> 7)), 
+	  		exponent = (((b0 << 1) & 0xff) | (b1 >> 7)) - 127, 
+	  		mantissa = ((b1 & 0x7f) << 16) | (b2 << 8) | b3;
 	  
 	  if (mantissa == 0 && exponent == -127) {
 	    return 0.0;
@@ -76,8 +75,6 @@ function parseFloat32EndianSwappedArray(data, offset, elements) {
 	  return [arr, max, min];
 };
 
-
-// I'd call this Endian Swapped
 function parseUInt32(data, offset) {
 
 	  var b0 = parseUChar8(data, offset), b1 = parseUChar8(data,
@@ -86,13 +83,12 @@ function parseUInt32(data, offset) {
 	  return (b3 << 24) + (b2 << 16) + (b1 << 8) + b0;
 };
 
-
-// I'd NOT call this Endian Swapped
 function parseUInt32EndianSwapped(data, offset) {
 
-	  var b0 = this.parseUChar8(data, offset), b1 = this.parseUChar8(data,
-	      offset + 1), b2 = this.parseUChar8(data, offset + 2), b3 = this
-	      .parseUChar8(data, offset + 3);
+	  var 	b0 = parseUChar8(data, offset), 
+	  		b1 = parseUChar8(data, offset + 1), 
+	  		b2 = parseUChar8(data, offset + 2), 
+	  		b3 = parseUChar8(data, offset + 3);
 	  
 	  return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
 };
@@ -140,11 +136,11 @@ stats = function(a){
 	for(var m = 0, p = 1, s = 0, l = t; l--; l>=0) {
 		s += a[l];
 		p *= a[l];
-		if(r.min > a[l]) {
+		if(r.min >= a[l]) {
 			r.min 		= a[l]; 
 			r.minIndex 	= l;
 		}
-		if(r.max < a[l]) {
+		if(r.max <= a[l]) {
 			r.max 		= a[l];
 			r.maxIndex 	= l;
 		}
@@ -204,16 +200,30 @@ function curvData_parse(data) {
 	stats_determine(af_curvVals);
 }
 
-function MRI_headerPrint(MRI) {
-	console.log(sprintf('%20s = %10d\n', 'ndim1', 	MRI.version));
-	console.log(sprintf('%20s = %10d\n', 'ndim1', 	MRI.ndim1));
-	console.log(sprintf('%20s = %10d\n', 'ndim2', 	MRI.ndim2));
-	console.log(sprintf('%20s = %10d\n', 'ndim3', 	MRI.ndim3));
-	console.log(sprintf('%20s = %10d\n', 'nframes', MRI.nframes));
-	console.log(sprintf('%20s = %10d\n', 'type', 	MRI.type));
-	console.log(sprintf('%20s = %10d\n', 'dof', 	MRI.dof));
-	console.log(sprintf('%20s = %10d\n', 'rasgoodflag', 	
+function MRI_headerPrint(MRI, b_prefix, b_suffix) {
+	
+	b_prefix	= typeof b_prefix !== 'undefined' ? b_prefix : 1;
+	b_suffix	= typeof b_suffix !== 'undefined' ? b_suffix : 1;
+
+	if (b_prefix) {
+		console.log(sprintf('%20s = %10d\n', 'version',	MRI.version));
+		console.log(sprintf('%20s = %10d\n', 'ndim1', 	MRI.ndim1));
+		console.log(sprintf('%20s = %10d\n', 'ndim2', 	MRI.ndim2));
+		console.log(sprintf('%20s = %10d\n', 'ndim3', 	MRI.ndim3));
+		console.log(sprintf('%20s = %10d\n', 'nframes', MRI.nframes));
+		console.log(sprintf('%20s = %10d\n', 'type', 	MRI.type));
+		console.log(sprintf('%20s = %10d\n', 'dof', 	MRI.dof));
+		console.log(sprintf('%20s = %10d\n', 'rasgoodflag', 	
 													MRI.rasgoodflag));
+	}
+	if (b_suffix) {
+		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Tr',			MRI.Tr));
+		console.log(sprintf('%20s = %10.5f [radian]\n','flipangle',		MRI.flipangle));
+		console.log(sprintf('%20s = %10.5f [degrees]\n','flipangle',	
+				MRI.flipangle * 180 / Math.PI));
+		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Te',			MRI.Te));
+		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Ti',			MRI.Ti));
+	}
 }
 
 function MRI_voxelSizesPrint(MRI) {
@@ -224,12 +234,109 @@ function MRI_voxelSizesPrint(MRI) {
 }
 
 function MRI_rasMatrixPrint(MRI) {
-	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+	var	width	= 10;
+	var	prec	= 5;
+	console.log(sprintf('| %10.5f%10.5f%10.5f%15.5f |\n',
 		MRI.M_ras[0][0], MRI.M_ras[0][1], MRI.M_ras[0][2], MRI.M_ras[0][3]));
-	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+	console.log(sprintf('| %10.5f%10.5f%10.5f%15.5f |\n',
 		MRI.M_ras[1][0], MRI.M_ras[1][1], MRI.M_ras[1][2], MRI.M_ras[1][3]));
-	console.log(sprintf('| %5.4f\t%5.4f\t%5.4f\t%5.4f |\n',
+	console.log(sprintf('| %10.5f%10.5f%10.5f%15.5f |\n',
 		MRI.M_ras[2][0], MRI.M_ras[2][1], MRI.M_ras[2][2], MRI.M_ras[2][3]));
+}
+
+function dobj(data, func_parse, dataSize, numElements) {
+	this.data			= [];
+	this._dataPointer	= 0;
+	this._chunkSizeOf	= 1;
+	this._chunks		= 1;
+	this.funcParse		= null;
+
+	if(typeof data 			!== 'undefined') this.data 			= data;
+	if(typeof func_parse 	!== 'undefined') this.funcParse		= func_parse;
+	if(typeof dataSize 		!== 'undefined') this._chunkSizeOf	= dataSize;	
+	if(typeof numElements   !== 'undefined') this._chunks		= numElements;
+}
+
+dobj.prototype.init		= function(func_parse, dataSize, numElements) {
+	if(typeof func_parse !== 'undefined') {
+		this.funcParse = func_parse;
+	}
+	
+	if(typeof dataSize !== 'undefined') {
+		this._chunkSizeOf = dataSize;
+	}
+	
+	if(typeof numElemens !== 'undefined') {
+		this._chunkSizeOf = numElements;
+	}
+
+	if(this.funcParse !== null) {
+		this.funcParse(this._dataPointer);
+	}
+};
+
+dobj.prototype.chunkSize	= function(size) {
+	this._chunkSizeOf = size;
+};
+
+dobj.prototype.readFunc		= function(readFunc, chunkSize) {
+	this.funcParse	= readFunc;
+	this._chunkSize	= chunkSize;
+};
+
+dobj.prototype.read		= function() {
+	bytes	= this.funcParse(this.data, this._dataPointer);
+	this._dataPointer += this._chunkSizeOf;
+	return bytes;
+};
+
+function dp(sizeof, bufsize) {
+	
+	this.seekTo	= function(seek) {
+		dp._counter = seek;
+		return dp._counter;
+	};
+	
+	this.b_printCounter = function(bool) {
+		if(bool) dp._b_printCounter = true;
+		else dp._b_printCounter		= false;
+		return dp._counter;
+	};
+	
+	this.pointer = function() {
+		return dp._counter;
+	};
+	
+	// A 'datapointer' function/object that tracks the position of
+	// a counter in a data array, roughly analogous to the file pointer
+	// concept in C.
+	if(typeof dp._sizeof == 'undefined') {
+		if(typeof sizeof == 'undefined') {
+			dp._sizeof = 1;
+		} else {
+			dp._sizeof	= sizeof;
+		}
+	}
+	
+	if(typeof dp._printCounter == 'undefined') {
+		dp._b_printCounter = false;
+	}
+	
+	dp._sizeof 			= typeof sizeof !== 'undefined' ? sizeof : dp._sizeof;
+	dp._bufsize			= typeof bufsize == 'undefined' ? 1 : bufsize;
+		
+	if(typeof dp._counter == 'undefined') {
+		dp._counter	= 0;
+	}
+
+	
+	dp._counterRet = dp._counter;
+	dp._counter += dp._sizeof * dp._bufsize;
+	if(dp._b_printCounter || true) {
+		console.log('In <dp> function object, returning counter = %d, current counter = %d\n', dp._counterRet, dp._counter);
+	}
+	
+	return dp._counterRet;
 }
 
 function mgzData_parse(data) {
@@ -238,6 +345,8 @@ function mgzData_parse(data) {
 			version:		0,
 			Tr: 			0, 
 			Te: 			0, 
+			flipangle:		0,
+			Ti:				0,
 			ndim1:			0,
 			ndim2:			0,
 			ndim3:			0,
@@ -262,7 +371,7 @@ function mgzData_parse(data) {
 			MRI_FLOAT	: {value: 3, name: "float", size:	4},
 			MRI_SHORT	: {value: 4, name: "short", size:	2},
 			MRI_BITMAP 	: {value: 5, name: "bitmap", size:  8}
-	}
+	};
 	
 	var UNUSED_SPACE_SIZE	= 256;
 	var MGH_VERSION			= 1;
@@ -272,68 +381,110 @@ function mgzData_parse(data) {
 	var	sizeof_float		= 4;
 	var sizeof_double		= 8;
 	var USED_SPACE_SIZE		= (3*sizeof_float+4*3*sizeof_float);
-	var unused_space_size	= USED_SPACE_SIZE - sizeof_float;
-
-	MRI.version		= parseUInt32EndianSwapped(data, 0);
-	MRI.ndim1		= parseUInt32EndianSwapped(data, 4);
-	MRI.ndim2		= parseUInt32EndianSwapped(data, 8);
-	MRI.ndim3		= parseUInt32EndianSwapped(data, 12);
-	MRI.nframes		= parseUInt32EndianSwapped(data, 16);
-	MRI.type		= parseUInt32EndianSwapped(data, 20);
-	MRI.dof			= parseUInt32EndianSwapped(data, 24);
-	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, 28); //dp now 30
+	var unused_space_size	= UNUSED_SPACE_SIZE;
 	
-	MRI_headerPrint(MRI);
+//	MRI.version		= parseUInt32EndianSwapped(data, 0);
+//	MRI.ndim1		= parseUInt32EndianSwapped(data, 4);
+//	MRI.ndim2		= parseUInt32EndianSwapped(data, 8);
+//	MRI.ndim3		= parseUInt32EndianSwapped(data, 12);
+//	MRI.nframes		= parseUInt32EndianSwapped(data, 16);
+//	MRI.type		= parseUInt32EndianSwapped(data, 20);
+//	MRI.dof			= parseUInt32EndianSwapped(data, 24);
+//	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, 28); //dp now 30
+	
+	dstream			= new dobj(data, parseUInt32EndianSwapped, sizeof_int);
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	dstream.readFunc(parseUInt16EndianSwapped, sizeof_short);
+	console.log(dstream.read());
+	dstream.readFunc(parseFloat32EndianSwapped, sizeof_float);
+	console.log(dstream.read());
+	console.log(dstream.read());
+	console.log(dstream.read());
+	
+	MRI.version		= parseUInt32EndianSwapped(data, dp(sizeof_int));
+	MRI.ndim1		= parseUInt32EndianSwapped(data, dp());
+	MRI.ndim2		= parseUInt32EndianSwapped(data, dp());
+	MRI.ndim3		= parseUInt32EndianSwapped(data, dp());
+	MRI.nframes		= parseUInt32EndianSwapped(data, dp());
+	MRI.type		= parseUInt32EndianSwapped(data, dp());
+	MRI.dof			= parseUInt32EndianSwapped(data, dp());
+	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, dp(sizeof_short)); //dp now 30
+	unused_space_size -= sizeof_short;
+	
+	MRI_headerPrint(MRI, 1, 0);
 
 	if(MRI.rasgoodflag > 0) {
 		// Read in voxel size and RAS matrix
 		unused_space_size -= USED_SPACE_SIZE;
-		MRI.v_voxelsize[0]	= parseFloat32EndianSwapped(data, 30);
-		MRI.v_voxelsize[1]	= parseFloat32EndianSwapped(data, 34);
-		MRI.v_voxelsize[2] 	= parseFloat32EndianSwapped(data, 38);
+		MRI.v_voxelsize[0]	= parseFloat32EndianSwapped(data, dp(sizeof_float));
+		MRI.v_voxelsize[1]	= parseFloat32EndianSwapped(data, dp());
+		MRI.v_voxelsize[2] 	= parseFloat32EndianSwapped(data, dp());
 		
 		// X
-		MRI.M_ras[0][0]		= parseFloat32EndianSwapped(data, 42);
-		MRI.M_ras[1][0]		= parseFloat32EndianSwapped(data, 46);
-		MRI.M_ras[2][0]		= parseFloat32EndianSwapped(data, 50);
+		MRI.M_ras[0][0]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[1][0]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[2][0]		= parseFloat32EndianSwapped(data, dp());
 
 		// Y
-		MRI.M_ras[0][1]		= parseFloat32EndianSwapped(data, 54);
-		MRI.M_ras[1][1]		= parseFloat32EndianSwapped(data, 58);
-		MRI.M_ras[2][1]		= parseFloat32EndianSwapped(data, 62);
+		MRI.M_ras[0][1]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[1][1]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[2][1]		= parseFloat32EndianSwapped(data, dp());
 		
 		// Z
-		MRI.M_ras[0][2]		= parseFloat32EndianSwapped(data, 66);
-		MRI.M_ras[1][2]		= parseFloat32EndianSwapped(data, 70);
-		MRI.M_ras[2][2]		= parseFloat32EndianSwapped(data, 74);
+		MRI.M_ras[0][2]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[1][2]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[2][2]		= parseFloat32EndianSwapped(data, dp());
 
 		// C
-		MRI.M_ras[0][3]		= parseFloat32EndianSwapped(data, 78);
-		MRI.M_ras[1][3]		= parseFloat32EndianSwapped(data, 82);
-		MRI.M_ras[2][3]		= parseFloat32EndianSwapped(data, 86); //dp = 90
+		MRI.M_ras[0][3]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[1][3]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[2][3]		= parseFloat32EndianSwapped(data, dp()); //dp = 90
 
 		MRI_voxelSizesPrint(MRI);
 		MRI_rasMatrixPrint(MRI);
 	}
-	
+	cprintf('unused space size', unused_space_size);
+	dp(sizeof_char, unused_space_size);
 	var volsize	= MRI.ndim1 * MRI.ndim2 * MRI.ndim3;
 	
+	var MRIdata;
 	switch(MRI.type) {
 	case MRItype.MRI_UCHAR.value:
+		MRIdata		= MRItype.MRI_UCHAR;
 		console.log('Reading UCHAR vals: %d\n', volsize);
-		a_ret		= parseUChar8Array(data, 90, volsize);
+		a_ret		= parseUChar8Array(data, dp(sizeof_char, volsize), volsize);
+//		a_ret		= parseUChar8Array(data, 284, volsize);
 		MRI.v_data	= a_ret[0];
 		break;
 	case MRItype.MRI_INT.value:
+		MRIdata		= MRItype.MRI_INT;
 		console.log('Reading INT vals: %d\n', volsize);
-		a_ret		= parseUInt32EndianSwappedArray(data, 90, volsize);
+		a_ret		= parseUInt32EndianSwappedArray(data, pointer, volsize);
 		MRI.v_data	= a_ret[0];
 		break;
-		
 	}
 	
-		
+	// Now for the final MRI parameters at the end of the data stream:
+	pointer			= 284 + volsize*MRIdata.size;
+//	MRI.Tr	 		= parseFloat32EndianSwapped(data, pointer);
+//	MRI.flipangle	= parseFloat32EndianSwapped(data, pointer + 1 * sizeof_float);
+//	MRI.Te			= parseFloat32EndianSwapped(data, pointer + 2 * sizeof_float);
+//	MRI.Ti			= parseFloat32EndianSwapped(data, pointer + 3 * sizeof_float);
+	console.log('reading final mr_params...\n');
+	MRI.Tr	 		= parseFloat32EndianSwapped(data, dp(sizeof_float));
+	MRI.flipangle	= parseFloat32EndianSwapped(data, dp());
+	MRI.Te			= parseFloat32EndianSwapped(data, dp());
+	MRI.Ti			= parseFloat32EndianSwapped(data, dp());
+	MRI_headerPrint(MRI, 0, 1);
+	
 	stats_determine(MRI.v_data);
+	return MRI;
 }
 
 function mgz_fileLoad(filePath) {
