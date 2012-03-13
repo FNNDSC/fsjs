@@ -39,7 +39,26 @@ function parseUInt16EndianSwapped(data, offset) {
 		  
 	};
 			
-function parseFloat32EndianSwapped(data, offset) {
+function parseUInt16EndianSwappedArray(data, offset, elements) {
+
+	  var arr = new Array();
+	  
+	  var max = 0;
+	  var min = Infinity;
+	  
+	  var i;
+	  for (i = 0; i < elements; i++) {
+	    var val = parseUInt16EndianSwapped(data, offset + (i * 2));
+	    arr[i] = val;
+	    max = Math.max(max, val);
+	    min = Math.min(min, val);
+	  }
+	  
+	  return [arr, max, min];
+};
+
+	
+	function parseFloat32EndianSwapped(data, offset) {
 
 	  var 	b0 = parseUChar8(data, offset), 
 	  		b1 = parseUChar8(data, offset + 1), 
@@ -217,12 +236,16 @@ function MRI_headerPrint(MRI, b_prefix, b_suffix) {
 													MRI.rasgoodflag));
 	}
 	if (b_suffix) {
-		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Tr',			MRI.Tr));
-		console.log(sprintf('%20s = %10.5f [radian]\n','flipangle',		MRI.flipangle));
-		console.log(sprintf('%20s = %10.5f [degrees]\n','flipangle',	
-				MRI.flipangle * 180 / Math.PI));
-		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Te',			MRI.Te));
-		console.log(sprintf('%20s = %10.5f [ms]\n', 	'Ti',			MRI.Ti));
+		console.log(sprintf('%20s = %10.5f [ms]\n', 	
+							'Tr',			MRI.Tr));
+		console.log(sprintf('%20s = %10.5f [radians]\n',
+							'flipangle',	MRI.flipangle));
+		console.log(sprintf('%20s = %10.5f [degrees]\n',
+							'flipangle',	MRI.flipangle * 180 / Math.PI));
+		console.log(sprintf('%20s = %10.5f [ms]\n',
+							'Te',			MRI.Te));
+		console.log(sprintf('%20s = %10.5f [ms]\n',
+							'Ti',			MRI.Ti));
 	}
 }
 
@@ -244,50 +267,60 @@ function MRI_rasMatrixPrint(MRI) {
 		MRI.M_ras[2][0], MRI.M_ras[2][1], MRI.M_ras[2][2], MRI.M_ras[2][3]));
 }
 
-function dobj(data, func_parse, dataSize, numElements) {
+function dobj(data, array_parse, dataSize, numElements) {
 	this.data			= [];
 	this._dataPointer	= 0;
-	this._chunkSizeOf	= 1;
+	this._sizeofChunk	= 1;
 	this._chunks		= 1;
-	this.funcParse		= null;
+	this._b_verbose		= false;
 
+	// A function that 'reads' from the data stream, returning
+	// an array of _chunks. If _chunkSizeOf is 1, then return
+	// only the _chunk.
+	this.array_parse	= null;
+ 
 	if(typeof data 			!== 'undefined') this.data 			= data;
-	if(typeof func_parse 	!== 'undefined') this.funcParse		= func_parse;
-	if(typeof dataSize 		!== 'undefined') this._chunkSizeOf	= dataSize;	
+	if(typeof array_parse 	!== 'undefined') this.array_parse	= array_parse;
+	if(typeof dataSize 		!== 'undefined') this._sizeofChunk	= dataSize;	
 	if(typeof numElements   !== 'undefined') this._chunks		= numElements;
 }
 
-dobj.prototype.init		= function(func_parse, dataSize, numElements) {
-	if(typeof func_parse !== 'undefined') {
-		this.funcParse = func_parse;
-	}
-	
-	if(typeof dataSize !== 'undefined') {
-		this._chunkSizeOf = dataSize;
-	}
-	
-	if(typeof numElemens !== 'undefined') {
-		this._chunkSizeOf = numElements;
-	}
-
-	if(this.funcParse !== null) {
-		this.funcParse(this._dataPointer);
-	}
+dobj.prototype.sizeofChunk	= function(size) {
+	if(typeof size == 'undefined') return this._sizeofChunk;
+	this._sizeofChunk = size;
 };
 
-dobj.prototype.chunkSize	= function(size) {
-	this._chunkSizeOf = size;
+dobj.prototype.dataPointer	= function(dataPointer) {
+	if(typeof dataPointer == 'undefined') return this._dataPointer;
+	this._dataPointer = dataPointer;
 };
 
-dobj.prototype.readFunc		= function(readFunc, chunkSize) {
-	this.funcParse	= readFunc;
-	this._chunkSize	= chunkSize;
+dobj.prototype.b_verbose	= function(verbosity) {
+	if(typeof verbosity == 'undefined') return this._b_verbose;
+	this._b_verbose = verbosity;
 };
 
-dobj.prototype.read		= function() {
-	bytes	= this.funcParse(this.data, this._dataPointer);
-	this._dataPointer += this._chunkSizeOf;
-	return bytes;
+dobj.prototype.array_parse_set = function(array_parse, sizeofChunk) {
+	this.array_parse	= array_parse;
+	this._sizeofChunk	= sizeofChunk;
+};
+
+dobj.prototype.read		= function(chunks) {
+	// By default, read and return a single chunk
+	if(typeof chunks == 'undefined') {
+		chunks = 1;
+	}
+	ret			= this.array_parse(this.data, this._dataPointer, chunks);
+	arr_byte	= ret[0];
+	if(this._b_verbose) {
+		cprints(sprintf('%d', this._dataPointer), arr_byte);
+	}
+	this._dataPointer += this._sizeofChunk * chunks;
+	if(chunks == 1) {
+		return arr_byte[0];
+	} else {
+		return arr_byte;
+	}
 };
 
 function dp(sizeof, bufsize) {
@@ -392,7 +425,8 @@ function mgzData_parse(data) {
 //	MRI.dof			= parseUInt32EndianSwapped(data, 24);
 //	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, 28); //dp now 30
 	
-	dstream			= new dobj(data, parseUInt32EndianSwapped, sizeof_int);
+	dstream			= new dobj(data, parseUInt32EndianSwappedArray, sizeof_int);
+	dstream.b_verbose(false);
 	console.log(dstream.read());
 	console.log(dstream.read());
 	console.log(dstream.read());
@@ -400,12 +434,12 @@ function mgzData_parse(data) {
 	console.log(dstream.read());
 	console.log(dstream.read());
 	console.log(dstream.read());
-	dstream.readFunc(parseUInt16EndianSwapped, sizeof_short);
+	dstream.array_parse_set(parseUInt16EndianSwappedArray, sizeof_short);
 	console.log(dstream.read());
-	dstream.readFunc(parseFloat32EndianSwapped, sizeof_float);
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
+	dstream.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
+	console.log('%f', dstream.read());
+	console.log('%f', dstream.read());
+	console.log('%f', dstream.read());
 	
 	MRI.version		= parseUInt32EndianSwapped(data, dp(sizeof_int));
 	MRI.ndim1		= parseUInt32EndianSwapped(data, dp());
