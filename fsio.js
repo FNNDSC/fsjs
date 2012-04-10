@@ -139,36 +139,38 @@ function fread3(data) {
 	return (b1 << 16) + (b2 << 8) + b3;
 }
 
-stats = function(a){
-	var r = {
-			mean: 		0, 
-			variance: 	0, 
-			deviation: 	0, 
-			prod: 		1, 
-			sum: 		0, 
-			min: 		0,
-			minIndex:	0,
-			max: 		0,
-			maxIndex:	0
-			};
-	var t = a.length;
-	for(var m = 0, p = 1, s = 0, l = t; l--; l>=0) {
-		s += a[l];
-		p *= a[l];
-		if(r.min >= a[l]) {
-			r.min 		= a[l]; 
-			r.minIndex 	= l;
-		}
-		if(r.max <= a[l]) {
-			r.max 		= a[l];
-			r.maxIndex 	= l;
-		}
-	};
-	r.prod 	= p;
-	r.sum	= s;
-	for(m = r.mean = s / t, l = t, s = 0; l--; s += Math.pow(a[l] - m, 2));
-	return r.deviation = Math.sqrt(r.variance = s / t), r;
-}
+//stats_calc = function(a){
+//	var r = {
+//			length:		0,
+//			mean: 		0, 
+//			variance: 	0, 
+//			deviation: 	0, 
+//			prod: 		1, 
+//			sum: 		0, 
+//			min: 		0,
+//			minIndex:	0,
+//			max: 		0,
+//			maxIndex:	0
+//			};
+//	var t = a.length;
+//	r.length	= t;
+//	for(var m = 0, p = 1, s = 0, l = t; l--; l>=0) {
+//		s += a[l];
+//		p *= a[l];
+//		if(r.min >= a[l]) {
+//			r.min 		= a[l]; 
+//			r.minIndex 	= l;
+//		}
+//		if(r.max <= a[l]) {
+//			r.max 		= a[l];
+//			r.maxIndex 	= l;
+//		}
+//	};
+//	r.prod 	= p;
+//	r.sum	= s;
+//	for(m = r.mean = s / t, l = t, s = 0; l--; s += Math.pow(a[l] - m, 2));
+//	return r.deviation = Math.sqrt(r.variance = s / t), r;
+//};
 
 function cprintd(str_left, val) {
 	console.log(sprintf('%20s%25s\n', str_left, sprintf('[ %d ]', val)));
@@ -182,10 +184,8 @@ function cprints(str_left, str_right) {
 	console.log(sprintf('%20s%25s\n', str_left, sprintf('[ %s ]', str_right)));
 }
 
-function stats_determine(a) {
-	var astats				= stats(a);
-	
-	cprintd('Size', 		a.length);
+function stats_print(astats) {
+	cprintd('Size', 		astats.size);
 	cprints('Min@(index)',	sprintf('%10.5f (%d)', astats.min, astats.minIndex));
 	cprints('Max@(index)',	sprintf('%10.5f (%d)', astats.max, astats.maxIndex));
 	cprintf('Mean',			astats.mean);
@@ -195,28 +195,51 @@ function stats_determine(a) {
 	cprintf('Var',			astats.variance);
 }
 
-function curvData_parse(data) {
-	
-	var vnum		= fread3(data);
-	
-	var nvertices	= parseUInt32EndianSwapped(data, 3);
-	var nfaces		= parseUInt32EndianSwapped(data, 7);
+function stats_printHTML(astats, pageIDElement) {
+	document.getElementById(pageIDElement).innerHTML += astats + "<br>";
+}
 
-	console.log(sprintf('%20s = %10d\n', 'MAGIC NUMBER', vnum));
-	console.log(sprintf('%20s = %10d\n', 'data size', data.length));
-	console.log(sprintf('%20s = %10d\n', 'nvertices', nvertices));
-	console.log(sprintf('%20s = %10d\n', 'nfaces', nfaces));
+function curvData_parse(data, ab_consoleOut) {
+	b_testX			= true;
+	b_consoleOut	= true;
+	if(typeof ab_consoleOut == 'undefined') b_consoleOut = false;
+
+	if(b_testX) {
+		obj	= new X.object();
+		var CRV = new X.parserCRV(); 
+		CRV.parse(obj, data);
+		stats = CRV.stats_calc(obj.curvVals);
+		stats_print(stats);
+		return obj.curvVals;
+	} else {
+		syslog('FreeSurfer "curv" format data stream START.');
+		var vnum		= fread3(data);
 	
-	var af_curvVals 	= [];
-	var al_ret			= [];
+		var nvertices	= parseUInt32EndianSwapped(data, 3);
+		var nfaces		= parseUInt32EndianSwapped(data, 7);
 	
-	al_ret = parseFloat32EndianSwappedArray(data, 11, nvertices);
-	af_curvVals			= al_ret[0];
+		if(b_consoleOut) {
+			console.log(sprintf('%20s = %10d\n', 'MAGIC NUMBER', 	vnum));
+			console.log(sprintf('%20s = %10d\n', 'data size', 		data.length));
+			console.log(sprintf('%20s = %10d\n', 'nvertices', 		nvertices));
+			console.log(sprintf('%20s = %10d\n', 'nfaces', 			nfaces));
+		}
 		
-	var f_max			= al_ret[1];
-	var f_min			= al_ret[2];
-	
-	stats_determine(af_curvVals);
+		var af_curvVals 	= [];
+		var al_ret			= [];
+		
+		al_ret = parseFloat32EndianSwappedArray(data, 11, nvertices);
+		af_curvVals			= al_ret[0];
+			
+		var f_max			= al_ret[1];
+		var f_min			= al_ret[2];
+		
+		var stats			= stats_calc(af_curvVals);
+		if(b_consoleOut) stats_print(stats);
+		stats_printHTML(stats, "console");
+		syslog('FreeSurfer "curv" format data stream START.');
+		return af_curvVals;
+	}
 }
 
 function MRI_headerPrint(MRI, b_prefix, b_suffix) {
@@ -267,7 +290,7 @@ function MRI_rasMatrixPrint(MRI) {
 		MRI.M_ras[2][0], MRI.M_ras[2][1], MRI.M_ras[2][2], MRI.M_ras[2][3]));
 }
 
-function dobj(data, array_parse, dataSize, numElements) {
+function dstream(data, array_parse, dataSize, numElements) {
 	this.data			= [];
 	this._dataPointer	= 0;
 	this._sizeofChunk	= 1;
@@ -285,37 +308,46 @@ function dobj(data, array_parse, dataSize, numElements) {
 	if(typeof numElements   !== 'undefined') this._chunks		= numElements;
 }
 
-dobj.prototype.sizeofChunk	= function(size) {
+dstream.prototype.sizeofChunk	= function(size) {
 	if(typeof size == 'undefined') return this._sizeofChunk;
 	this._sizeofChunk = size;
 };
 
-dobj.prototype.dataPointer	= function(dataPointer) {
+dstream.prototype.dataPointer	= function(dataPointer) {
 	if(typeof dataPointer == 'undefined') return this._dataPointer;
 	this._dataPointer = dataPointer;
 };
 
-dobj.prototype.b_verbose	= function(verbosity) {
+dstream.prototype.dataStream	= function(array_data) {
+	if(typeof array_data == 'undefined') return this.data;
+	this.data 			= array_data;
+};
+
+dstream.prototype.b_verbose	= function(verbosity) {
 	if(typeof verbosity == 'undefined') return this._b_verbose;
 	this._b_verbose = verbosity;
 };
 
-dobj.prototype.array_parse_set = function(array_parse, sizeofChunk) {
+dstream.prototype.array_parse_set = function(array_parse, sizeofChunk) {
 	this.array_parse	= array_parse;
 	this._sizeofChunk	= sizeofChunk;
 };
 
-dobj.prototype.read		= function(chunks) {
+dstream.prototype.read		= function(chunks) {
 	// By default, read and return a single chunk
 	if(typeof chunks == 'undefined') {
 		chunks = 1;
 	}
+	// The 'array_parse' returns a list array. The data array itself is in the
+	// first element of the list.
 	ret			= this.array_parse(this.data, this._dataPointer, chunks);
 	arr_byte	= ret[0];
 	if(this._b_verbose) {
 		cprints(sprintf('%d', this._dataPointer), arr_byte);
 	}
 	this._dataPointer += this._sizeofChunk * chunks;
+	// If we are just reading a single "chunk", return the first data element
+	// of the array, else the whole array.
 	if(chunks == 1) {
 		return arr_byte[0];
 	} else {
@@ -323,56 +355,13 @@ dobj.prototype.read		= function(chunks) {
 	}
 };
 
-function dp(sizeof, bufsize) {
-	
-	this.seekTo	= function(seek) {
-		dp._counter = seek;
-		return dp._counter;
-	};
-	
-	this.b_printCounter = function(bool) {
-		if(bool) dp._b_printCounter = true;
-		else dp._b_printCounter		= false;
-		return dp._counter;
-	};
-	
-	this.pointer = function() {
-		return dp._counter;
-	};
-	
-	// A 'datapointer' function/object that tracks the position of
-	// a counter in a data array, roughly analogous to the file pointer
-	// concept in C.
-	if(typeof dp._sizeof == 'undefined') {
-		if(typeof sizeof == 'undefined') {
-			dp._sizeof = 1;
-		} else {
-			dp._sizeof	= sizeof;
-		}
-	}
-	
-	if(typeof dp._printCounter == 'undefined') {
-		dp._b_printCounter = false;
-	}
-	
-	dp._sizeof 			= typeof sizeof !== 'undefined' ? sizeof : dp._sizeof;
-	dp._bufsize			= typeof bufsize == 'undefined' ? 1 : bufsize;
-		
-	if(typeof dp._counter == 'undefined') {
-		dp._counter	= 0;
-	}
-
-	
-	dp._counterRet = dp._counter;
-	dp._counter += dp._sizeof * dp._bufsize;
-	if(dp._b_printCounter || true) {
-		console.log('In <dp> function object, returning counter = %d, current counter = %d\n', dp._counterRet, dp._counter);
-	}
-	
-	return dp._counterRet;
+function syslog(astr_logString) {
+	console.log(sprintf('%s %s %s', Date(), window.location.hostname, astr_logString));
 }
 
-function mgzData_parse(data) {
+function mgzData_parse(data, ab_consoleOut) {
+	b_consoleOut	= true;
+	if(typeof ab_consoleOut == 'undefined') b_consoleOut = false;
 
 	var MRI = {
 			version:		0,
@@ -387,6 +376,7 @@ function mgzData_parse(data) {
 			type:			0,
 			dof:			0,
 			rasgoodflag:	0,
+			MRIreader:		null,
 			M_ras:			[
 			      			 [0, 0, 0, 0],
 			      			 [0, 0, 0, 0],
@@ -398,12 +388,18 @@ function mgzData_parse(data) {
 			};	
 
 	var MRItype = {
-			MRI_UCHAR	: {value: 0, name: "uchar",	size:	1},
-			MRI_INT		: {value: 1, name: "int",	size:	4},
-			MRI_LONG	: {value: 2, name: "long",	size:   8},
-			MRI_FLOAT	: {value: 3, name: "float", size:	4},
-			MRI_SHORT	: {value: 4, name: "short", size:	2},
-			MRI_BITMAP 	: {value: 5, name: "bitmap", size:  8}
+		MRI_UCHAR	: {	value: 0,	name: "uchar",	size:	1, 
+						func_arrayRead: parseUChar8Array },
+		MRI_INT		: {	value: 1, 	name: "int",	size:	4,
+						func_arrayRead: parseUInt32EndianSwappedArray },
+		MRI_LONG	: {	value: 2, 	name: "long",	size:   8,
+						func_arrayRead: null },	// NOT YET DEFINED!
+		MRI_FLOAT	: {	value: 3, 	name: "float", 	size:	4,
+						func_arrayRead: parseFloat32EndianSwappedArray },
+		MRI_SHORT	: { value: 4, 	name: "short", 	size:	2,
+						func_arrayRead: parseUInt16EndianSwappedArray },
+		MRI_BITMAP 	: {	value: 5, 	name: "bitmap", size:  	8,
+						func_arrayRead: null}	// NOT YET DEFINED!
 	};
 	
 	var UNUSED_SPACE_SIZE	= 256;
@@ -416,108 +412,92 @@ function mgzData_parse(data) {
 	var USED_SPACE_SIZE		= (3*sizeof_float+4*3*sizeof_float);
 	var unused_space_size	= UNUSED_SPACE_SIZE;
 	
-//	MRI.version		= parseUInt32EndianSwapped(data, 0);
-//	MRI.ndim1		= parseUInt32EndianSwapped(data, 4);
-//	MRI.ndim2		= parseUInt32EndianSwapped(data, 8);
-//	MRI.ndim3		= parseUInt32EndianSwapped(data, 12);
-//	MRI.nframes		= parseUInt32EndianSwapped(data, 16);
-//	MRI.type		= parseUInt32EndianSwapped(data, 20);
-//	MRI.dof			= parseUInt32EndianSwapped(data, 24);
-//	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, 28); //dp now 30
+	syslog('FreeSurfer MGH/MGZ data stream START.');
+	syslog('Reading MGH/MGZ header');
+	dataptr			= new dstream(data, parseUInt32EndianSwappedArray, sizeof_int);
+	dataptr.b_verbose(false);
+	MRI.version		= dataptr.read();
+	MRI.ndim1		= dataptr.read();
+	MRI.ndim2		= dataptr.read();
+	MRI.ndim3		= dataptr.read();
+	MRI.nframes		= dataptr.read();
+	MRI.type		= dataptr.read();
+	switch(MRI.type) {
+		case 0:	MRI.MRIdatatype = MRItype.MRI_UCHAR; 	break;
+		case 1: MRI.MRIdatatype = MRItype.MRI_INT;		break;
+		case 2: MRI.MRIdatatype = MRItype.MRI_LONG; 	break;
+		case 3: MRI.MRIdatatype = MRItype.MRI_FLOAT;	break;
+		case 4:	MRI.MRIdatatype = MRItype.MRI_SHORT;	break;
+		case 5: MRI.MRIdatatype = MRItype.MRI_BITMAP;	break;
+		// case else?
+	}
+	MRI.dof			= dataptr.read();
+	dataptr.array_parse_set(parseUInt16EndianSwappedArray, sizeof_short);
+	MRI.rasgoodflag	= dataptr.read();
 	
-	dstream			= new dobj(data, parseUInt32EndianSwappedArray, sizeof_int);
-	dstream.b_verbose(false);
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
-	console.log(dstream.read());
-	dstream.array_parse_set(parseUInt16EndianSwappedArray, sizeof_short);
-	console.log(dstream.read());
-	dstream.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
-	console.log('%f', dstream.read());
-	console.log('%f', dstream.read());
-	console.log('%f', dstream.read());
-	
-	MRI.version		= parseUInt32EndianSwapped(data, dp(sizeof_int));
-	MRI.ndim1		= parseUInt32EndianSwapped(data, dp());
-	MRI.ndim2		= parseUInt32EndianSwapped(data, dp());
-	MRI.ndim3		= parseUInt32EndianSwapped(data, dp());
-	MRI.nframes		= parseUInt32EndianSwapped(data, dp());
-	MRI.type		= parseUInt32EndianSwapped(data, dp());
-	MRI.dof			= parseUInt32EndianSwapped(data, dp());
-	MRI.rasgoodflag	= parseUInt16EndianSwapped(data, dp(sizeof_short)); //dp now 30
 	unused_space_size -= sizeof_short;
 	
-	MRI_headerPrint(MRI, 1, 0);
+	if(b_consoleOut) MRI_headerPrint(MRI, 1, 0);
 
 	if(MRI.rasgoodflag > 0) {
+		dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
 		// Read in voxel size and RAS matrix
 		unused_space_size -= USED_SPACE_SIZE;
-		MRI.v_voxelsize[0]	= parseFloat32EndianSwapped(data, dp(sizeof_float));
-		MRI.v_voxelsize[1]	= parseFloat32EndianSwapped(data, dp());
-		MRI.v_voxelsize[2] 	= parseFloat32EndianSwapped(data, dp());
+		MRI.v_voxelsize[0]	= dataptr.read();
+		MRI.v_voxelsize[1]	= dataptr.read();
+		MRI.v_voxelsize[2] 	= dataptr.read();
 		
 		// X
-		MRI.M_ras[0][0]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[1][0]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[2][0]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[0][0]		= dataptr.read();
+		MRI.M_ras[1][0]		= dataptr.read();
+		MRI.M_ras[2][0]		= dataptr.read();
 
 		// Y
-		MRI.M_ras[0][1]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[1][1]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[2][1]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[0][1]		= dataptr.read();
+		MRI.M_ras[1][1]		= dataptr.read();
+		MRI.M_ras[2][1]		= dataptr.read();
 		
 		// Z
-		MRI.M_ras[0][2]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[1][2]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[2][2]		= parseFloat32EndianSwapped(data, dp());
+		MRI.M_ras[0][2]		= dataptr.read();
+		MRI.M_ras[1][2]		= dataptr.read();
+		MRI.M_ras[2][2]		= dataptr.read();
 
 		// C
-		MRI.M_ras[0][3]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[1][3]		= parseFloat32EndianSwapped(data, dp());
-		MRI.M_ras[2][3]		= parseFloat32EndianSwapped(data, dp()); //dp = 90
+		MRI.M_ras[0][3]		= dataptr.read();
+		MRI.M_ras[1][3]		= dataptr.read();
+		MRI.M_ras[2][3]		= dataptr.read();
 
-		MRI_voxelSizesPrint(MRI);
-		MRI_rasMatrixPrint(MRI);
+		if(b_consoleOut) {
+			MRI_voxelSizesPrint(MRI);
+			MRI_rasMatrixPrint(MRI);
+		}
 	}
-	cprintf('unused space size', unused_space_size);
-	dp(sizeof_char, unused_space_size);
+	//cprintf('unused space size', unused_space_size);
+	dataptr.array_parse_set(parseUChar8Array, sizeof_char);
+	dataptr.read(unused_space_size);
 	var volsize	= MRI.ndim1 * MRI.ndim2 * MRI.ndim3;
 	
-	var MRIdata;
-	switch(MRI.type) {
-	case MRItype.MRI_UCHAR.value:
-		MRIdata		= MRItype.MRI_UCHAR;
-		console.log('Reading UCHAR vals: %d\n', volsize);
-		a_ret		= parseUChar8Array(data, dp(sizeof_char, volsize), volsize);
-//		a_ret		= parseUChar8Array(data, 284, volsize);
-		MRI.v_data	= a_ret[0];
-		break;
-	case MRItype.MRI_INT.value:
-		MRIdata		= MRItype.MRI_INT;
-		console.log('Reading INT vals: %d\n', volsize);
-		a_ret		= parseUInt32EndianSwappedArray(data, pointer, volsize);
-		MRI.v_data	= a_ret[0];
-		break;
-	}
+	syslog('Reading MGH/MGZ image data');
+	syslog(sprintf('Accessing %d %s vals (%d bytes)', volsize, MRI.MRIdatatype.name, 
+			volsize*MRI.MRIdatatype.size));
+	dataptr.array_parse_set(MRI.MRIdatatype.func_arrayRead, MRI.MRIdatatype.size);
+	a_ret	= dataptr.read(volsize);
+	MRI.v_data	= a_ret;
 	
 	// Now for the final MRI parameters at the end of the data stream:
-	pointer			= 284 + volsize*MRIdata.size;
-//	MRI.Tr	 		= parseFloat32EndianSwapped(data, pointer);
-//	MRI.flipangle	= parseFloat32EndianSwapped(data, pointer + 1 * sizeof_float);
-//	MRI.Te			= parseFloat32EndianSwapped(data, pointer + 2 * sizeof_float);
-//	MRI.Ti			= parseFloat32EndianSwapped(data, pointer + 3 * sizeof_float);
-	console.log('reading final mr_params...\n');
-	MRI.Tr	 		= parseFloat32EndianSwapped(data, dp(sizeof_float));
-	MRI.flipangle	= parseFloat32EndianSwapped(data, dp());
-	MRI.Te			= parseFloat32EndianSwapped(data, dp());
-	MRI.Ti			= parseFloat32EndianSwapped(data, dp());
-	MRI_headerPrint(MRI, 0, 1);
-	
-	stats_determine(MRI.v_data);
+	if(dataptr.dataPointer()+4*sizeof_float < dataptr.dataStream().length) {
+		syslog('Reading MGH/MGZ MRI parameters');
+		dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
+		MRI.Tr	 		= dataptr.read();
+		MRI.flipangle	= dataptr.read();
+		MRI.Te			= dataptr.read();
+		MRI.Ti			= dataptr.read();
+		if(b_consoleOut) MRI_headerPrint(MRI, 0, 1);
+	}
+	syslog('Calculating data/image stats...');
+	stats = stats_calc(MRI.v_data);
+	if(b_consoleOut) stats_print(stats);
+	syslog('FreeSurfer MGH/MGZ data stream END.');
 	return MRI;
 }
 
@@ -571,7 +551,7 @@ function curv_fileLoad(filePath) {
 function run() {
 	
 	curv_fileLoad('rh.smoothwm.K.crv');
-	mgz_fileLoad('orig.mgh');
-	console.log('Curvature file parsed\n');
+//	mgz_fileLoad('orig.mgh');
+//	mgz_fileLoad('origfloat.mgh');
 	
 }
