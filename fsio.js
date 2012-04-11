@@ -365,7 +365,7 @@ function mgzData_parse(data, ab_consoleOut) {
 		var obj	= new X.object();
 		var MGZ = new X.parserMGZ(); 
 		MGZ.parse(obj, data);
-		stats = MGZ.stats_calc(MRI.v_data);
+		stats = MGZ.stats_calc(obj.MRI.v_data);
 		stats_print(stats);
 		return MRI;
 	} else {
