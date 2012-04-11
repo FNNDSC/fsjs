@@ -359,13 +359,18 @@ function syslog(astr_logString) {
 	console.log(sprintf('%s %s %s', Date(), window.location.hostname, astr_logString));
 }
 
-function mgzData_parse(data, ab_consoleOut) {
+function mgzData_parse(data, b_zipped) {
     b_testX = true;
 	if(b_testX) {
 		var obj	= new X.object();
 		var MGZ = new X.parserMGZ(); 
-		MGZ.parse(obj, data);
-		stats = MGZ.stats_calc(obj.MRI.v_data);
+		MGZ.parse(obj, data, b_zipped);
+		MRI	  = obj.MRI;
+		stats = MGZ.stats_calc(MRI.v_data);
+		
+		MRI_headerPrint(MRI, 1, 1);
+		MRI_voxelSizesPrint(MRI);
+		MRI_rasMatrixPrint(MRI);
 		stats_print(stats);
 		return MRI;
 	} else {
@@ -511,7 +516,7 @@ function mgzData_parse(data, ab_consoleOut) {
 	}
 }
 
-function mgz_fileLoad(filePath) {
+function mgz_fileLoad(filePath, b_zipped) {
 
 	// we use a simple XHR to get the file contents
 	  // this works for binary and for ascii files
@@ -523,7 +528,7 @@ function mgz_fileLoad(filePath) {
 	  //request.onAbort = loadAbort();
 	  //request.onError = loadError();
 	  request.addEventListener('load', function() { 
-		  mgzData_parse(request.response); });
+		  mgzData_parse(request.response, b_zipped); });
 
 	  // configure the URL
 	  request.open('GET', filePath, true);
@@ -561,7 +566,7 @@ function curv_fileLoad(filePath) {
 function run() {
 	
 	curv_fileLoad('rh.smoothwm.K.crv');
-	mgz_fileLoad('orig.mgh');
+	mgz_fileLoad('orig.mgh', 0);
 //	mgz_fileLoad('origfloat.mgh');
 	
 }
