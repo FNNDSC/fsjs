@@ -205,7 +205,7 @@ function curvData_parse(data, ab_consoleOut) {
 	if(typeof ab_consoleOut == 'undefined') b_consoleOut = false;
 
 	if(b_testX) {
-		obj	= new X.object();
+		var obj	= new X.object();
 		var CRV = new X.parserCRV(); 
 		CRV.parse(obj, data);
 		stats = CRV.stats_calc(obj.curvVals);
@@ -360,10 +360,19 @@ function syslog(astr_logString) {
 }
 
 function mgzData_parse(data, ab_consoleOut) {
-	b_consoleOut	= true;
-	if(typeof ab_consoleOut == 'undefined') b_consoleOut = false;
+    b_testX = true;
+	if(b_testX) {
+		var obj	= new X.object();
+		var MGZ = new X.parserMGZ(); 
+		MGZ.parse(obj, data);
+		stats = MGZ.stats_calc(MRI.v_data);
+		stats_print(stats);
+		return MRI;
+	} else {
+		b_consoleOut	= true;
+		if(typeof ab_consoleOut == 'undefined') b_consoleOut = false;
 
-	var MRI = {
+		var MRI = {
 			version:		0,
 			Tr: 			0, 
 			Te: 			0, 
@@ -387,7 +396,7 @@ function mgzData_parse(data, ab_consoleOut) {
 			V_data: 		[]		// data as volume 
 			};	
 
-	var MRItype = {
+		var MRItype = {
 		MRI_UCHAR	: {	value: 0,	name: "uchar",	size:	1, 
 						func_arrayRead: parseUChar8Array },
 		MRI_INT		: {	value: 1, 	name: "int",	size:	4,
@@ -400,105 +409,106 @@ function mgzData_parse(data, ab_consoleOut) {
 						func_arrayRead: parseUInt16EndianSwappedArray },
 		MRI_BITMAP 	: {	value: 5, 	name: "bitmap", size:  	8,
 						func_arrayRead: null}	// NOT YET DEFINED!
-	};
-	
-	var UNUSED_SPACE_SIZE	= 256;
-	var MGH_VERSION			= 1;
-	var sizeof_char			= 1;
-	var sizeof_short		= 2;
-	var sizeof_int			= 4;
-	var	sizeof_float		= 4;
-	var sizeof_double		= 8;
-	var USED_SPACE_SIZE		= (3*sizeof_float+4*3*sizeof_float);
-	var unused_space_size	= UNUSED_SPACE_SIZE;
-	
-	syslog('FreeSurfer MGH/MGZ data stream START.');
-	syslog('Reading MGH/MGZ header');
-	dataptr			= new dstream(data, parseUInt32EndianSwappedArray, sizeof_int);
-	dataptr.b_verbose(false);
-	MRI.version		= dataptr.read();
-	MRI.ndim1		= dataptr.read();
-	MRI.ndim2		= dataptr.read();
-	MRI.ndim3		= dataptr.read();
-	MRI.nframes		= dataptr.read();
-	MRI.type		= dataptr.read();
-	switch(MRI.type) {
-		case 0:	MRI.MRIdatatype = MRItype.MRI_UCHAR; 	break;
-		case 1: MRI.MRIdatatype = MRItype.MRI_INT;		break;
-		case 2: MRI.MRIdatatype = MRItype.MRI_LONG; 	break;
-		case 3: MRI.MRIdatatype = MRItype.MRI_FLOAT;	break;
-		case 4:	MRI.MRIdatatype = MRItype.MRI_SHORT;	break;
-		case 5: MRI.MRIdatatype = MRItype.MRI_BITMAP;	break;
-		// case else?
-	}
-	MRI.dof			= dataptr.read();
-	dataptr.array_parse_set(parseUInt16EndianSwappedArray, sizeof_short);
-	MRI.rasgoodflag	= dataptr.read();
-	
-	unused_space_size -= sizeof_short;
-	
-	if(b_consoleOut) MRI_headerPrint(MRI, 1, 0);
-
-	if(MRI.rasgoodflag > 0) {
-		dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
-		// Read in voxel size and RAS matrix
-		unused_space_size -= USED_SPACE_SIZE;
-		MRI.v_voxelsize[0]	= dataptr.read();
-		MRI.v_voxelsize[1]	= dataptr.read();
-		MRI.v_voxelsize[2] 	= dataptr.read();
+		};
 		
-		// X
-		MRI.M_ras[0][0]		= dataptr.read();
-		MRI.M_ras[1][0]		= dataptr.read();
-		MRI.M_ras[2][0]		= dataptr.read();
-
-		// Y
-		MRI.M_ras[0][1]		= dataptr.read();
-		MRI.M_ras[1][1]		= dataptr.read();
-		MRI.M_ras[2][1]		= dataptr.read();
+		var UNUSED_SPACE_SIZE	= 256;
+		var MGH_VERSION			= 1;
+		var sizeof_char			= 1;
+		var sizeof_short		= 2;
+		var sizeof_int			= 4;
+		var	sizeof_float		= 4;
+		var sizeof_double		= 8;
+		var USED_SPACE_SIZE		= (3*sizeof_float+4*3*sizeof_float);
+		var unused_space_size	= UNUSED_SPACE_SIZE;
 		
-		// Z
-		MRI.M_ras[0][2]		= dataptr.read();
-		MRI.M_ras[1][2]		= dataptr.read();
-		MRI.M_ras[2][2]		= dataptr.read();
-
-		// C
-		MRI.M_ras[0][3]		= dataptr.read();
-		MRI.M_ras[1][3]		= dataptr.read();
-		MRI.M_ras[2][3]		= dataptr.read();
-
-		if(b_consoleOut) {
-			MRI_voxelSizesPrint(MRI);
-			MRI_rasMatrixPrint(MRI);
+		syslog('FreeSurfer MGH/MGZ data stream START.');
+		syslog('Reading MGH/MGZ header');
+		dataptr			= new dstream(data, parseUInt32EndianSwappedArray, sizeof_int);
+		dataptr.b_verbose(false);
+		MRI.version		= dataptr.read();
+		MRI.ndim1		= dataptr.read();
+		MRI.ndim2		= dataptr.read();
+		MRI.ndim3		= dataptr.read();
+		MRI.nframes		= dataptr.read();
+		MRI.type		= dataptr.read();
+		switch(MRI.type) {
+			case 0:	MRI.MRIdatatype = MRItype.MRI_UCHAR; 	break;
+			case 1: MRI.MRIdatatype = MRItype.MRI_INT;		break;
+			case 2: MRI.MRIdatatype = MRItype.MRI_LONG; 	break;
+			case 3: MRI.MRIdatatype = MRItype.MRI_FLOAT;	break;
+			case 4:	MRI.MRIdatatype = MRItype.MRI_SHORT;	break;
+			case 5: MRI.MRIdatatype = MRItype.MRI_BITMAP;	break;
+			// case else?
 		}
-	}
-	//cprintf('unused space size', unused_space_size);
-	dataptr.array_parse_set(parseUChar8Array, sizeof_char);
-	dataptr.read(unused_space_size);
-	var volsize	= MRI.ndim1 * MRI.ndim2 * MRI.ndim3;
+		MRI.dof			= dataptr.read();
+		dataptr.array_parse_set(parseUInt16EndianSwappedArray, sizeof_short);
+		MRI.rasgoodflag	= dataptr.read();
+		
+		unused_space_size -= sizeof_short;
+		
+		if(b_consoleOut) MRI_headerPrint(MRI, 1, 0);
 	
-	syslog('Reading MGH/MGZ image data');
-	syslog(sprintf('Accessing %d %s vals (%d bytes)', volsize, MRI.MRIdatatype.name, 
-			volsize*MRI.MRIdatatype.size));
-	dataptr.array_parse_set(MRI.MRIdatatype.func_arrayRead, MRI.MRIdatatype.size);
-	a_ret	= dataptr.read(volsize);
-	MRI.v_data	= a_ret;
+		if(MRI.rasgoodflag > 0) {
+			dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
+			// Read in voxel size and RAS matrix
+			unused_space_size -= USED_SPACE_SIZE;
+			MRI.v_voxelsize[0]	= dataptr.read();
+			MRI.v_voxelsize[1]	= dataptr.read();
+			MRI.v_voxelsize[2] 	= dataptr.read();
+			
+			// X
+			MRI.M_ras[0][0]		= dataptr.read();
+			MRI.M_ras[1][0]		= dataptr.read();
+			MRI.M_ras[2][0]		= dataptr.read();
 	
-	// Now for the final MRI parameters at the end of the data stream:
-	if(dataptr.dataPointer()+4*sizeof_float < dataptr.dataStream().length) {
-		syslog('Reading MGH/MGZ MRI parameters');
-		dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
-		MRI.Tr	 		= dataptr.read();
-		MRI.flipangle	= dataptr.read();
-		MRI.Te			= dataptr.read();
-		MRI.Ti			= dataptr.read();
-		if(b_consoleOut) MRI_headerPrint(MRI, 0, 1);
+			// Y
+			MRI.M_ras[0][1]		= dataptr.read();
+			MRI.M_ras[1][1]		= dataptr.read();
+			MRI.M_ras[2][1]		= dataptr.read();
+			
+			// Z
+			MRI.M_ras[0][2]		= dataptr.read();
+			MRI.M_ras[1][2]		= dataptr.read();
+			MRI.M_ras[2][2]		= dataptr.read();
+	
+			// C
+			MRI.M_ras[0][3]		= dataptr.read();
+			MRI.M_ras[1][3]		= dataptr.read();
+			MRI.M_ras[2][3]		= dataptr.read();
+	
+			if(b_consoleOut) {
+				MRI_voxelSizesPrint(MRI);
+				MRI_rasMatrixPrint(MRI);
+			}
+		}
+		//cprintf('unused space size', unused_space_size);
+		dataptr.array_parse_set(parseUChar8Array, sizeof_char);
+		dataptr.read(unused_space_size);
+		var volsize	= MRI.ndim1 * MRI.ndim2 * MRI.ndim3;
+		
+		syslog('Reading MGH/MGZ image data');
+		syslog(sprintf('Accessing %d %s vals (%d bytes)', volsize, MRI.MRIdatatype.name, 
+				volsize*MRI.MRIdatatype.size));
+		dataptr.array_parse_set(MRI.MRIdatatype.func_arrayRead, MRI.MRIdatatype.size);
+		a_ret	= dataptr.read(volsize);
+		MRI.v_data	= a_ret;
+		
+		// Now for the final MRI parameters at the end of the data stream:
+		if(dataptr.dataPointer()+4*sizeof_float < dataptr.dataStream().length) {
+			syslog('Reading MGH/MGZ MRI parameters');
+			dataptr.array_parse_set(parseFloat32EndianSwappedArray, sizeof_float);
+			MRI.Tr	 		= dataptr.read();
+			MRI.flipangle	= dataptr.read();
+			MRI.Te			= dataptr.read();
+			MRI.Ti			= dataptr.read();
+			if(b_consoleOut) MRI_headerPrint(MRI, 0, 1);
+		}
+		syslog('Calculating data/image stats...');
+		stats = stats_calc(MRI.v_data);
+		if(b_consoleOut) stats_print(stats);
+		syslog('FreeSurfer MGH/MGZ data stream END.');
+		return MRI;
 	}
-	syslog('Calculating data/image stats...');
-	stats = stats_calc(MRI.v_data);
-	if(b_consoleOut) stats_print(stats);
-	syslog('FreeSurfer MGH/MGZ data stream END.');
-	return MRI;
 }
 
 function mgz_fileLoad(filePath) {
@@ -551,7 +561,7 @@ function curv_fileLoad(filePath) {
 function run() {
 	
 	curv_fileLoad('rh.smoothwm.K.crv');
-//	mgz_fileLoad('orig.mgh');
+	mgz_fileLoad('orig.mgh');
 //	mgz_fileLoad('origfloat.mgh');
 	
 }
