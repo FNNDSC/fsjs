@@ -4,7 +4,7 @@
 <title>XTK TEST WITHOUT COMPILATION</title>
 
 <script type="text/javascript" src="sprintf.js"></script>
-<script type="text/javascript" src="fsio.js"></script>
+<script type="text/javascript" src="fslbl.js"></script>
 
 <script type="text/javascript" src="../X/lib/closure-library/closure/goog/base.js"></script>
 <script type="text/javascript" src="../X/xtk-deps.js"></script>
@@ -13,24 +13,25 @@
 
   // include all used X-classes here
   // this is only required when using the xtk-deps.js file
-  goog.require('X.renderer');
-  goog.require('X.object');
+  goog.require('X.renderer3D');
+  goog.require('X.mesh');
   goog.require('X.parserHelper');
   goog.require('X.parserCRV');
-  goog.require('X.parserMGZ');
+  goog.require('X.parserFSM');
+  goog.require('X.parserLBL');
 </script>
 
 </head>
 
-<body onload="run()">
-
-</body>
-<h1>FreeSurfer file format reading</h1>
+<body>
+<h1>FreeSurfer label file format reading</h1>
 
 <p>
-FreeSurfer curvature file stats:
+FreeSurfer label file stats:
 <p>
 
 <p id="fscurv">FS curvature stats:<br><span id="console"></span></p>
+
+</body>
 
 </html>
