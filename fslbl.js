@@ -9,16 +9,17 @@ window.onload = function() {
 	mesh.scalars.file = 'lh.smoothwm.H.crv';
 	mesh.scalars.minColor = [0, 1, 0];
 	mesh.scalars.maxColor = [1, 0, 0];
+	mesh.scalars.interpolation = 1;
 	
 	r.add(mesh);
 	r.camera.position = [0, 0, 500];
 	r.render();
 
 	r.onShowtime = function () {
-	    mesh.scalars.file = 'label/lh.frontal.label';
+	    mesh.scalars.file = 'label/lh.BA2.label';
 	    mesh.modified();
 //	    r.onShowtime = function () {
-//	    	mesh.scalars.file = 'label/lh.frontal.label';
+//	    	mesh.scalars.file = 'label/lh.occipital.label';
 //		    mesh.modified();
 //	    };
 	};
